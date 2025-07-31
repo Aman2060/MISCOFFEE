@@ -1,0 +1,90 @@
+<?php
+session_start();
+
+// Database credentials
+$servername = "localhost";
+$username = "root"; // Change if needed
+$password = "";     // Change if needed
+$dbname = "website_db";
+
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+$error = "";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $email = trim($_POST["email"] ?? "");
+    $password = $_POST["password"] ?? "";
+
+    if ($email && $password) {
+        $stmt = $conn->prepare("SELECT id, username, email, password_hash FROM users WHERE email = ? LIMIT 1");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            if (password_verify($password, $row["password_hash"])) {
+                // Login success
+                $_SESSION["user_id"] = $row["id"];
+                $_SESSION["username"] = $row["username"];
+                header("Location: index.php");
+                exit();
+            } else {
+                $error = "Invalid user";
+            }
+        } else {
+            $error = "Invalid user";
+        }
+        $stmt->close();
+    } else {
+        $error = "Please enter both email and password.";
+    }
+}
+$conn->close();
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MIS Coffee</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { background: #f8f5f2; }
+        .login-container { background: #f3e5d8; max-width: 400px; margin: 80px auto 0 auto; padding: 2.5rem 2rem 2rem 2rem; border-radius: 28px; box-shadow: 0 6px 32px rgba(78, 52, 46, 0.10); display: flex; flex-direction: column; align-items: center; }
+        .login-container h2 { color: #8d6748; margin-bottom: 1.5rem; font-size: 2rem; font-weight: 700; }
+        .login-form { width: 100%; display: flex; flex-direction: column; gap: 1.2rem; }
+        .login-form label { color: #4e342e; font-weight: 500; margin-bottom: 0.3rem; }
+        .login-form input { padding: 0.7rem 1rem; border: 1px solid #e0c9b2; border-radius: 12px; font-size: 1rem; background: #fff7ed; color: #4e342e; outline: none; transition: border 0.2s; }
+        .login-form input:focus { border: 1.5px solid #a67c52; }
+        .login-btn { background: #a67c52; color: #fff; border: none; padding: 0.7rem 0; border-radius: 20px; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem; transition: background 0.2s; }
+        .login-btn:hover { background: #8d6748; }
+        .login-note { margin-top: 1.5rem; color: #a67c52; font-size: 0.95rem; text-align: center; }
+        .error-msg { color: #b94a48; background: #fff7ed; border-radius: 10px; padding: 0.7rem 1rem; margin-bottom: 1rem; text-align: center; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login to MIS Coffee</h2>
+        <?php if ($error): ?>
+            <div class="error-msg"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+        <form class="login-form" action="login.php" method="POST">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+            <button class="login-btn" type="submit">Login</button>
+        </form>
+        <div class="login-note">
+            <p>Database: <b>website_db</b> &nbsp; | &nbsp; Table: <b>users</b></p>
+        </div>
+    </div>
+</body>
+</html> 
+
+
